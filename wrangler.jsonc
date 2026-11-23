@@ -1,0 +1,15 @@
+{
+  // vr.phylab.uk — the 3D and VR part of the learn.phylab.uk lesson, on its own short address (easy to type on a headset).
+  // Static pages only, served from public/.
+  "name": "vr-phylab-uk",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    { "pattern": "vr.phylab.uk", "custom_domain": true }
+  ],
+  "observability": { "enabled": true }
+}

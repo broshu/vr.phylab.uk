@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The electric field in 3D · vr.phylab.uk</title>
+<meta name="description" content="Place charges in 3D, in the browser, in AR or in a VR headset, and see the electric field lines around them.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27%230d6b5f%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/vr.css">
+<style>
+  .wrap.wide { max-width: 1240px; }
+  .lead { color: var(--ink-soft); max-width: 62em; }
+  .jump { display: flex; gap: 8px; margin: 14px 0 0; flex-wrap: wrap; }
+  .addr { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="wrap wide">
+  <a class="brand" href="/">vr<span>.phylab.uk</span></a>
+  <span class="where">The electric field in 3D</span>
+  <nav class="parts" aria-label="Sections"><a href="#explore">Explore</a><a href="#match">Match</a></nav>
+</div></header>
+
+<main class="wrap wide" style="padding-top:22px">
+  <h1>The electric field in 3D</h1>
+  <p class="lead">Field lines do not lie in a flat page: they fill the space around the charges. Place charges and charged objects on the table and look at their field from every side. Use the <b>VR</b> tab in a headset browser (for example Meta Quest), <b>AR</b> on a tablet or a headset with passthrough, or stay in the browser.</p>
+
+  <h2 class="part" id="explore">Explore the space</h2>
+  <p>Try one charge on its own; a positive and a negative charge; +2<i>q</i> with &minus;<i>q</i>; a charged plate; a positive and a negative plate facing each other (a parallel-plate capacitor); a point charge above a plate; the charged rod and the charged ring.</p>
+  <div id="space3d"></div>
+
+  <h2 class="part" id="match">Match the field</h2>
+  <p>The orange lines show a field, but the objects that make it are hidden. Choose objects from the trays and place them so that they make the same field. Count the lines: the number of lines leaving or reaching a charge is proportional to its charge. Your own field lines stay hidden while you work; check to see them over the orange ones.</p>
+  <div id="matchStudent"></div>
+
+  <footer class="site">
+    <p style="margin:0">vr.phylab.uk is the 3D and VR part of <a href="https://learn.phylab.uk">learn.phylab.uk</a>, collected on its own short address so it is quick to type on a headset. Part of <a href="https://phylab.uk">phylab.uk</a>.</p>
+  </footer>
+</main>
+
+<script type="module">
+  import { openRecord } from "/record.js";
+  import { startSpace3D } from "/space3d.js";
+  import { startMatch } from "/match.js";
+  const rec = openRecord();
+  try {
+    startSpace3D(document.getElementById("space3d"), { rec });
+    startMatch({ student: document.getElementById("matchStudent"), rec });
+  } catch (err) {
+    document.getElementById("space3d").innerHTML = `<p class="card">The 3D space could not load (${err.message}). Reload the page to try again.</p>`;
+  }
+</script>
+</body>
+</html>

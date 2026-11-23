@@ -1,0 +1,22 @@
+/* vr.phylab.uk — the 3D space (from learn.phylab.uk /during/) */
+.v3-tabs { display: inline-flex; gap: 2px; padding: 3px; background: #e9e5da; border-radius: 9px; margin: 4px 0 10px; }
+.v3-tabs button { appearance: none; border: 0; background: transparent; padding: 5px 16px; border-radius: 7px; font: 600 0.88rem var(--sans); color: var(--ink-soft); cursor: pointer; }
+.v3-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(26,32,48,0.15); }
+.v3-tabs button.na:not(.on) { opacity: 0.65; }
+.v3-note { background: var(--warn-soft); border: 1px solid #ecd9ad; border-radius: 9px; padding: 10px 14px; margin: 0 0 10px; font-size: 0.93rem; }
+.v3-note p { margin: 0; } .v3-note .btn { margin-top: 10px; }
+.v3-note a.btn { display: inline-flex; align-items: center; gap: 0; text-decoration: none; } .v3-note a.btn.busy { opacity: 0.6; pointer-events: none; }
+.v3-stage { position: relative; height: min(70vh, 640px); min-height: 340px; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; background: #f7f5ef; }
+.v3-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.v3-flash { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); margin: 0; background: rgba(26,32,48,0.86); color: #fff; padding: 6px 12px; border-radius: 7px; font-size: 0.88rem; }
+.v3-xr { position: absolute; inset: 0; pointer-events: none; display: flex; justify-content: flex-end; align-items: flex-start; padding: 16px; }
+.v3-xr .btn { pointer-events: auto; }
+.v3-bar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; justify-content: space-between; margin-top: 8px; }
+.v3-hint { margin: 0; flex: 1 1 380px; color: var(--ink-soft); font-size: 0.88rem; }
+.v3-tools { display: flex; gap: 12px; align-items: center; font-size: 0.88rem; }
+.v3-tools select { font: inherit; padding: 2px 4px; }
+.v3-tools .btn { padding: 4px 12px; font-size: 0.86rem; }
+.v3-stage { height: min(78vh, 760px); }
+@media (max-width: 640px) { .v3-stage { height: 92vw; min-height: 0; } }
+h2.part { font-size: 1.25rem; margin: 22px 0 8px; }
+ul.tight { padding-left: 1.2em; margin: 8px 0 0; }
