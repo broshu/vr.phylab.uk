@@ -277,9 +277,10 @@ const partsOf = (kind, q) => kind === "point" ? qParts(q)
  * mode "explore": free exploration, the field lines of whatever is on the table are always shown.
  * mode "match": the field of `target` (hidden objects) is shown in orange; the student places objects without
  * seeing their own lines, then Check shows their lines over the target and calls judge(placed) and onCheck(result).
+ * vrFirst: where the device can open VR, start on the VR tab with its Start VR button (a headset page opens ready for VR).
  * Returns { check, clear }.
  */
-export function startSpace3D(root, { rec, mode: task = "explore", target = [], judge = null, onCheck = () => {} } = {}) {
+export function startSpace3D(root, { rec, mode: task = "explore", target = [], judge = null, onCheck = () => {}, vrFirst = false } = {}) {
   const match = task === "match";
   root.classList.add("v3");
   root.innerHTML = `
@@ -749,6 +750,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
     log("tab", { mode: m });
   }
   tabs.forEach((b) => b.addEventListener("click", () => setTab(b.dataset.mode)));
+  if (vrFirst) checked.then(() => { if (support.vr && mode === "browser") setTab("vr"); });
 
   // ---------- iPad and iPhone: Apple's AR viewer instead of AR in the page ----------
   // Safari on iPad and iPhone does not support WebXR, so AR cannot run inside the page there (an Apple limit, not this

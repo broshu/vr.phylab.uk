@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore · vr.phylab.uk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2712%27 fill=%27%230d6b5f%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/vr.css">
+</head>
+<body class="project">
+<main class="stagewrap"><div id="space3d"></div></main>
+<script type="module">
+  import { openRecord } from "/record.js";
+  import { mountShell } from "/shell.js";
+  import { startSpace3D } from "/space3d.js";
+  mountShell("explore");
+  try { startSpace3D(document.getElementById("space3d"), { rec: openRecord(), vrFirst: true }); }
+  catch (err) { document.getElementById("space3d").innerHTML = `<p class="card">The 3D space could not load (${err.message}). Reload the page to try again.</p>`; }
+</script>
+</body>
+</html>

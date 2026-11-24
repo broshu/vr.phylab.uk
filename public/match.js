@@ -7,11 +7,11 @@ import { TARGET, TOL, judgeMatch } from "/match-judge.js";
 
 const OK = "#0d6b5f", BAD = "#c0392b", EXTRA = "#d98200";
 
-export function startMatch({ student, rec }) {
+export function startMatch({ student, rec, vrFirst = false }) {
   const fb = (student.innerHTML = `<div id="mSpace"></div><div id="mFeedback" aria-live="polite" style="margin-top:12px"></div>`, student.querySelector("#mFeedback"));
   let checks = 0;
   startSpace3D(student.querySelector("#mSpace"), {
-    rec, mode: "match", target: TARGET, judge: judgeMatch,
+    rec, vrFirst, mode: "match", target: TARGET, judge: judgeMatch,
     onCheck(result, placed) {
       checks++;
       rec.set("match", { placed, result, checks });

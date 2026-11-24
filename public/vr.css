@@ -20,3 +20,33 @@
 @media (max-width: 640px) { .v3-stage { height: 92vw; min-height: 0; } }
 h2.part { font-size: 1.25rem; margin: 22px 0 8px; }
 ul.tight { padding-left: 1.2em; margin: 8px 0 0; }
+
+/* ---------- home: the project boxes (big, to point at with a controller or a hand) ---------- */
+body.home { min-height: 100vh; }
+.menu { max-width: 1100px; margin: 0 auto; padding: 48px 24px 40px; }
+.menu-head h1 { font-size: clamp(2.4rem, 7vw, 4rem); }
+.menu-head h1 span { color: var(--ink-soft); font-weight: 400; }
+.menu-head p { font-size: 1.25rem; color: var(--ink-soft); margin: 10px 0 36px; }
+.boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.box { display: flex; flex-direction: column; gap: 14px; min-height: 240px; padding: 28px; text-decoration: none; color: var(--ink);
+  background: #fff; border: 2px solid var(--rule); border-radius: 18px; box-shadow: 0 2px 0 rgba(26,32,48,0.05); }
+.box:hover, .box:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); outline: none; }
+.box-title { font: 600 2.2rem var(--serif); }
+.box-blurb { font-size: 1.2rem; color: var(--ink-soft); flex: 1; }
+.box-go { font-weight: 700; font-size: 1.2rem; color: var(--accent); }
+.menu-foot { margin-top: 40px; color: var(--ink-soft); font-size: 1rem; }
+
+/* ---------- a project page: the 3D space fills the window ---------- */
+body.project { margin: 0; }
+.vbar { display: flex; align-items: center; gap: 18px; height: 64px; padding: 0 20px; background: var(--paper); border-bottom: 1px solid var(--rule); position: sticky; top: 0; z-index: 5; }
+.vback { font: 600 1.25rem var(--sans); color: #fff; background: var(--accent); text-decoration: none; padding: 10px 22px; border-radius: 10px; }
+.vback:hover, .vback:focus-visible { filter: brightness(1.1); }
+.vtitle { font: 600 1.4rem var(--serif); flex: 1; }
+.vbrand { font: 600 1.05rem var(--serif); } .vbrand span { color: var(--ink-soft); font-weight: 400; }
+.stagewrap { padding: 12px 20px 24px; }
+.project .v3-stage { height: calc(100dvh - 230px); min-height: 380px; }
+.project .v3-tabs button { font-size: 1.1rem; padding: 9px 24px; }
+.project .v3-note { font-size: 1.1rem; }
+.project .v3-note .btn { font-size: 1.4rem; padding: 16px 36px; border-radius: 12px; }
+.project .v3-hint { font-size: 0.95rem; }
+@media (max-width: 640px) { .project .v3-stage { height: 70vw; min-height: 280px; } }
