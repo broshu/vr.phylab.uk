@@ -6,7 +6,7 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 - `/` — the project list: big boxes to point at in a headset
 - `/explore/` — Explore: place charges and charged objects in 3D and look at their field lines
 - `/match/` — Match: place hidden charges to make the orange field you are shown
-- On a device that can open VR (a headset browser), a project page starts on the VR tab with a large Start VR button; elsewhere it opens in the browser view. VR itself must be started by a tap or trigger: browsers do not allow it to start by itself.
+- The site is for VR headsets only: there are no Browser or AR modes. A project page shows the space and a large Start VR button (a browser only starts VR from a tap, a pinch or the trigger, never by itself). On a device that cannot open VR the page says so and shows the space as a preview you can turn with the mouse.
 
 ## Adding a project
 
@@ -15,7 +15,7 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 
 ## Files
 
-- `public/space3d.js` — the 3D space (three.js, WebXR for AR and VR)
+- `public/space3d.js` — the 3D space (three.js, WebXR VR)
 - `public/match.js`, `public/match-judge.js` — the match task and its forgiving check
 - `public/shell.js` — the top bar of a project page (back to the list, project name)
 - `public/vendor/three/` — three.js

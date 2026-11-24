@@ -8,7 +8,7 @@
 // a controller or a hand. Sizes are in metres, so the scene is desk-sized in AR and at arm's length in VR.
 // three.js is served from this site (public/vendor/three/), so it comes from the same nearby Cloudflare edge as the page.
 import * as THREE from "/vendor/three/three.min.js";
-const { OrbitControls, USDZExporter, mergeGeometries } = THREE;
+const { OrbitControls } = THREE;
 
 const TABLE = 0.3;            // half-width of the table: only objects above the table make the field
 const Y0 = 0.03, Y1 = 0.4;    // lowest and highest an object can be held
@@ -277,21 +277,14 @@ const partsOf = (kind, q) => kind === "point" ? qParts(q)
  * mode "explore": free exploration, the field lines of whatever is on the table are always shown.
  * mode "match": the field of `target` (hidden objects) is shown in orange; the student places objects without
  * seeing their own lines, then Check shows their lines over the target and calls judge(placed) and onCheck(result).
- * vrFirst: where the device can open VR, start on the VR tab with its Start VR button (a headset page opens ready for VR).
  * Returns { check, clear }.
  */
-export function startSpace3D(root, { rec, mode: task = "explore", target = [], judge = null, onCheck = () => {}, vrFirst = false } = {}) {
+export function startSpace3D(root, { rec, mode: task = "explore", target = [], judge = null, onCheck = () => {} } = {}) {
   const match = task === "match";
   root.classList.add("v3");
   root.innerHTML = `
-    <div class="v3-tabs" role="tablist" aria-label="How to view the 3D space">
-      <button type="button" role="tab" data-mode="browser" class="on" aria-selected="true">Browser</button>
-      <button type="button" role="tab" data-mode="ar">AR</button>
-      <button type="button" role="tab" data-mode="vr">VR</button>
-    </div>
     <div class="v3-note" hidden></div>
     <div class="v3-stage">
-      <div class="v3-xr" hidden><button type="button" class="btn v3-exit">Exit AR</button></div>
       <p class="v3-flash" hidden></p>
     </div>
     <div class="v3-bar">
@@ -303,7 +296,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
       </div>
     </div>`;
   const stage = root.querySelector(".v3-stage"), note = root.querySelector(".v3-note");
-  const xrBar = root.querySelector(".v3-xr"), flashEl = root.querySelector(".v3-flash");
+  const flashEl = root.querySelector(".v3-flash");
   const log = (action, d = {}) => rec && rec.event(match ? "match3d" : "space3d", { action, ...d });
 
   // renderer, camera, scene
@@ -533,8 +526,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
   if (!match) START.forEach((s) => addObject(s.kind, s.q, s.x, s.y, s.z));
   // for checking the field lines: /during/?debug3d exposes a way to place objects from the console
   if (new URLSearchParams(location.search).has("debug3d"))
-    window[match ? "match3d" : "space3d"] = { add: (kind, q, x, y, z, tilt, yaw) => { const c = addObject(kind, q, x, y, z); if (tilt !== undefined) { c.tilt = tilt * DEG; c.yaw = (yaw || 0) * DEG; c.quat = orient(c.yaw, c.tilt); turned(c); } return c; }, clear: () => [...charges].forEach(removeCharge), check, camera, controls,
-      usdz: async () => { const g = new THREE.Group(); for (const c of charges) { const m = new THREE.Mesh(c.geom, new THREE.MeshStandardMaterial()); m.position.set(c.x, c.y, c.z); g.add(m); } if (mine.lines) g.add(tubes(mine.lines, LINE.screen)); return (await new USDZExporter().parseAsync(g, { quickLookCompatible: true })).byteLength; } };
+    window[match ? "match3d" : "space3d"] = { add: (kind, q, x, y, z, tilt, yaw) => { const c = addObject(kind, q, x, y, z); if (tilt !== undefined) { c.tilt = tilt * DEG; c.yaw = (yaw || 0) * DEG; c.quat = orient(c.yaw, c.tilt); turned(c); } return c; }, clear: () => [...charges].forEach(removeCharge), check, camera, controls };
 
   const up = new THREE.Vector3(0, 1, 0), tmpQ = new THREE.Quaternion(), tmpM = new THREE.Matrix4();
   const tmpP = new THREE.Vector3(), tmpT = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
@@ -708,128 +700,36 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
     ray.ray.direction.set(0, 0, -1).applyMatrix4(tmpM);
   }
 
-  // ---------- Browser / AR / VR ----------
-  const support = { ar: false, vr: false };
-  const checked = (navigator.xr ? Promise.all(["ar", "vr"].map((m) =>
-    navigator.xr.isSessionSupported("immersive-" + m).then((ok) => { support[m] = ok; }).catch(() => {}))) : Promise.resolve());
-  const tabs = [...root.querySelectorAll(".v3-tabs button")];
-  let mode = "browser";
-  checked.then(() => tabs.forEach((b) => { const m = b.dataset.mode; if (m !== "browser" && !support[m] && !(m === "ar" && quickLook)) b.classList.add("na"); }));
-
-  const NOTE = {
-    ar: {
-      yes: "<b>AR</b> puts this space on the desk in front of you, in the camera view. Point at a charge and pinch, press the trigger or touch the screen to take it and move it.",
-      no: "<b>AR</b> needs a headset browser with passthrough (for example Meta Quest) or Chrome on an Android phone or tablet. This browser cannot open it, so the view below stays in the browser. Safari on iPad and iPhone does not support AR on web pages yet.",
-    },
-    vr: {
-      yes: "<b>VR</b> puts this space in front of you in the headset. Point at an object and pinch or press the trigger to take it; it moves and turns with your hand.",
-      no: "<b>VR</b> needs the browser of a VR headset (for example Meta Quest or Apple Vision Pro). This browser cannot open it, so the view below stays in the browser.",
-    },
-  };
-  const APPLE_AR = "<b>AR on iPad and iPhone.</b> Safari on iPad and iPhone does not support AR inside web pages: this is a limit of Apple\u2019s Safari, not of this site. Instead, the button opens Apple\u2019s own AR viewer with what is on the table now. You can place it on a real desk and walk round it, but nothing can be moved there: to change it, come back here, change it, and open it again.";
-  function setTab(m) {
-    mode = m;
-    tabs.forEach((b) => { const on = b.dataset.mode === m; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
-    if (m === "browser") { note.hidden = true; return; }
-    checked.then(() => {
-      if (mode !== m) return;
-      const ok = support[m];
-      if (m === "ar" && !ok && quickLook) {
-        // the anchor must hold an image for Safari to hand the file to the AR viewer
-        note.innerHTML = `<p>${APPLE_AR}</p><a rel="ar" class="btn v3-enter busy" href="#"><img alt="" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==">Preparing the AR view\u2026</a>`;
-        note.hidden = false;
-        note.querySelector("a[rel=ar]").addEventListener("click", (e) => { if (!qlURL) e.preventDefault(); else log("apple ar viewer"); });
-        prepareQuickLook();
-        return;
-      }
-      note.innerHTML = `<p>${ok ? NOTE[m].yes : NOTE[m].no}</p>` + (ok ? `<button type="button" class="btn v3-enter">Start ${m.toUpperCase()}</button>` : "");
-      note.hidden = false;
-      const b = note.querySelector(".v3-enter");
-      if (b) b.addEventListener("click", () => enter(m));
-    });
-    log("tab", { mode: m });
-  }
-  tabs.forEach((b) => b.addEventListener("click", () => setTab(b.dataset.mode)));
-  if (vrFirst) checked.then(() => { if (support.vr && mode === "browser") setTab("vr"); });
-
-  // ---------- iPad and iPhone: Apple's AR viewer instead of AR in the page ----------
-  // Safari on iPad and iPhone does not support WebXR, so AR cannot run inside the page there (an Apple limit, not this
-  // site's). Instead the scene on the table is exported as a USDZ file made in the browser's memory and opened in
-  // Apple's AR viewer (AR Quick Look): it can be looked at from every side, but not changed there. Only one such file
-  // is kept, in memory: the previous one is released whenever a new one is made, and all of it when the page closes.
-  const appleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const quickLook = (appleTouch && !!document.createElement("a").relList?.supports?.("ar"))
-    || new URLSearchParams(location.search).has("appletest"); // ?appletest shows the iPad version on a computer, for checking
-  let qlURL = null, qlTimer = 0, qlBusy = false;
-  const releaseQL = () => { if (qlURL) { URL.revokeObjectURL(qlURL); qlURL = null; } };
-  window.addEventListener("pagehide", releaseQL);
-  /** Field lines as thin tubes (Apple's viewer cannot show plain lines), with their arrows, as one mesh. */
-  function tubes(lines, color) {
-    const geos = [];
-    for (const L of lines) {
-      const p = L.pts, pts = [];
-      for (let k = 0; k < p.length; k += 6) pts.push(new THREE.Vector3(p[k], p[k + 1], p[k + 2]));
-      const e = p.length - 3; pts.push(new THREE.Vector3(p[e], p[e + 1], p[e + 2]));
-      if (pts.length < 2) continue;
-      geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), Math.min(160, pts.length * 2), 0.0012, 5, false));
-      const m = arrowAt(L);
-      if (m) geos.push(new THREE.ConeGeometry(0.0045, 0.014, 10).applyMatrix4(m));
-    }
-    return geos.length ? new THREE.Mesh(mergeGeometries(geos), new THREE.MeshStandardMaterial({ color, roughness: 0.6 })) : null;
-  }
-  function prepareQuickLook() {
-    clearTimeout(qlTimer);
-    const a = note.querySelector("a[rel=ar]");
-    if (a) { a.classList.add("busy"); a.lastChild.textContent = "Preparing the AR view\u2026"; }
-    qlTimer = setTimeout(async () => {
-      if (qlBusy) { prepareQuickLook(); return; }
-      qlBusy = true;
-      try {
-        const g = new THREE.Group();
-        const floorM = new THREE.Mesh(new THREE.BoxGeometry(2 * TABLE, 0.002, 2 * TABLE), new THREE.MeshStandardMaterial({ color: 0xece7da, roughness: 0.9 }));
-        floorM.position.y = -0.001; g.add(floorM);
-        for (const c of charges) if (!c.out && !c.falling) {
-          const m = new THREE.Mesh(c.geom, new THREE.MeshStandardMaterial({ color: c.q > 0 ? COLOR.pos : COLOR.neg, roughness: 0.45 }));
-          m.position.set(c.x, c.y, c.z); m.quaternion.copy(c.quat); g.add(m);
-        }
-        if (goal && goal.lines) { const t = tubes(goal.lines, TARGET_LINE.screen); if (t) g.add(t); }
-        if (shown && mine.lines) { const t = tubes(mine.lines, LINE.screen); if (t) g.add(t); }
-        g.updateMatrixWorld(true); // the exporter reads each object's matrix: without this every object sits at the centre
-        const buf = await new USDZExporter().parseAsync(g, { quickLookCompatible: true });
-        releaseQL();
-        qlURL = URL.createObjectURL(new Blob([buf], { type: "model/vnd.usdz+zip" }));
-        const a2 = note.querySelector("a[rel=ar]");
-        if (a2) { a2.href = qlURL; a2.classList.remove("busy"); a2.lastChild.textContent = "View in AR (Apple\u2019s viewer)"; }
-      } catch (err) {
-        flash(`Could not make the AR view: ${err.message || err}`);
-      } finally { qlBusy = false; }
-    }, 500);
-  }
-
+  // ---------- VR ----------
+  // This site opens in a VR headset's browser. A browser only starts VR from a tap, a pinch or the trigger, so the page
+  // shows the space and a large Start VR button; on a device that cannot open VR it says so and still shows the space.
+  const supported = navigator.xr ? navigator.xr.isSessionSupported("immersive-vr").catch(() => false) : Promise.resolve(false);
   let xrMode = null;
-  async function enter(m) {
-    const opts = m === "ar"
-      ? { optionalFeatures: ["dom-overlay", "hand-tracking"], domOverlay: { root: xrBar } }
-      : { optionalFeatures: ["hand-tracking"] };
+  async function enter() {
     try {
-      const session = await navigator.xr.requestSession("immersive-" + m, opts);
-      xrMode = m;
+      const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["hand-tracking"] });
+      xrMode = "vr";
       await renderer.xr.setSession(session);
-      log("enter", { mode: m });
+      log("enter", { mode: "vr" });
     } catch (err) {
       xrMode = null;
-      flash(`Could not start ${m.toUpperCase()}: ${err.message || err}`);
+      flash(`Could not start VR: ${err.message || err}`);
     }
   }
-  xrBar.querySelector(".v3-exit").addEventListener("beforexrselect", (e) => e.preventDefault());
-  xrBar.querySelector(".v3-exit").addEventListener("click", () => renderer.xr.getSession()?.end());
+  supported.then((ok) => {
+    note.innerHTML = ok
+      ? `<p><b>Put the headset on, then start.</b> Point at an object and pinch or press the trigger to take it; it moves and turns with your hand.</p><button type="button" class="btn v3-enter">Start VR</button>`
+      : `<p><b>This browser cannot open VR.</b> Open vr.phylab.uk in the browser of a VR headset (for example Meta Quest). The space below is a preview: drag to turn it.</p>`;
+    note.hidden = false;
+    const b = note.querySelector(".v3-enter");
+    if (b) b.addEventListener("click", enter);
+  });
 
   renderer.xr.addEventListener("sessionstart", () => {
     world.position.set(0.02, -0.42, -0.65);               // the space sits a little below the eyes, at arm's length
-    scene.background = xrMode === "vr" ? new THREE.Color(COLOR.vr) : null;
-    floorMat.opacity = xrMode === "vr" ? 0.12 : 0.35;
+    scene.background = new THREE.Color(COLOR.vr);
+    floorMat.opacity = 0.12;
     mine.color(match ? MINE_XR : LINE.xr); if (goal) goal.color(TARGET_LINE.xr);
-    xrBar.hidden = xrMode !== "ar";
     controls.enabled = false;
   });
   renderer.xr.addEventListener("sessionend", () => {
@@ -838,7 +738,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
     scene.background = new THREE.Color(COLOR.paper);
     floorMat.opacity = 1;
     mine.color(LINE.screen); if (goal) goal.color(TARGET_LINE.screen);
-    xrBar.hidden = true; controls.enabled = true; xrMode = null;
+    controls.enabled = true; xrMode = null;
     log("exit");
   });
 
@@ -879,7 +779,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
       if (d.rot) { d.c.quat = c.getWorldQuaternion(new THREE.Quaternion()).multiply(d.qc0).multiply(d.q0); turned(d.c); }
       ctrlRay(c); follow(d, ...toLocal(ray.ray.origin, ray.ray.direction));
     });
-    if (dirty) { rebuild(); if (mode === "ar" && quickLook) prepareQuickLook(); }
+    if (dirty) rebuild();
     if (!xr) controls.update();
     renderer.render(scene, camera);
   });
