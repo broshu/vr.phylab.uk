@@ -3,7 +3,7 @@
 The 3D and VR part of the electric-field lesson, on its own short address so it is quick to type on a headset.
 It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); the lesson there is unchanged.
 
-- `/` — the project list: big boxes to point at in a headset
+- `/` — the project list: big boxes to point at in a headset, each with a cover picture (`public/covers/`)
 - `/explore/` — Explore: place charges and charged objects in 3D and look at their field lines
 - `/match/` — Match: place hidden charges to make the orange field you are shown
 - `/lab/` — Electromagnetism lab: a classroom-sized room with five stations (a point charge, parallel plates, a box of uniform magnetic field, a bar magnet, a coil) and a table to build on; a particle gun in the right hand, a probe for E and B in the left, challenges at each station
@@ -17,6 +17,7 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 
 1. Add an entry to `public/projects.js` (`slug`, `title`, `blurb`). It then appears on the home page.
 2. Make `public/<slug>/index.html` (copy `public/explore/index.html`). Its address is `vr.phylab.uk/<slug>/`.
+3. Add a cover picture `public/covers/<slug>.jpg`, 960 × 540 (16 : 9), a screenshot of the project's 3D space. It sits at the top of the project's box on the home page.
 
 ## Files
 

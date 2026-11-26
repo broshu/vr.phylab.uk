@@ -23,7 +23,7 @@
   import { vrLinks } from "/xr-nav.js";
   vrLinks(document.getElementById("projects"));
   document.getElementById("projects").innerHTML = PROJECTS.map((p) =>
-    `<a class="box" href="/${p.slug}/"><span class="box-title">${p.title}</span><span class="box-blurb">${p.blurb}</span><span class="box-go">Open ›</span></a>`).join("");
+    `<a class="box" href="/${p.slug}/"><img class="box-cover" src="/covers/${p.slug}.jpg" alt="" width="960" height="540" loading="lazy"><span class="box-body"><span class="box-title">${p.title}</span><span class="box-blurb">${p.blurb}</span><span class="box-go">Open ›</span></span></a>`).join("");
 </script>
 </body>
 </html>

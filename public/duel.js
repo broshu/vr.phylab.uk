@@ -703,4 +703,7 @@ export function startDuel(root) {
     }
     renderer.render(scene, camera);
   });
+
+  // for checking: /duel/?debugduel exposes the page in the console (practice, the camera)
+  if (new URLSearchParams(location.search).has("debugduel")) window.duel = { practice: () => startGame({ practice: true }), camera, scene };
 }
