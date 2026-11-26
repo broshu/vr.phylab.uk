@@ -7,6 +7,7 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 - `/explore/` — Explore: place charges and charged objects in 3D and look at their field lines
 - `/match/` — Match: place hidden charges to make the orange field you are shown
 - `/lab/` — Electromagnetism lab: a classroom-sized room with five stations (a point charge, parallel plates, a box of uniform magnetic field, a bar magnet, a coil) and a table to build on; a particle gun in the right hand, a probe for E and B in the left, challenges at each station
+- `/duel/` — Duel: two players, each with an electric and a magnetic shield, fire charges at each other (see below)
 - The site is for VR headsets only: there are no Browser or AR modes. A project page shows the space and a large Start VR button (a browser only starts VR from a tap, a pinch or the trigger, never by itself). On a device that cannot open VR the page says so and shows the space as a preview you can turn with the mouse.
 - Fewer Start VR presses (`public/xr-nav.js`): choosing a box on the home page starts VR there and hands it on, so the project opens already in VR; in VR, the project buttons on the floor (front left) go to another project and stay in VR. This needs the browser to hand the VR session on to the next page (the `sessiongranted` event in Meta Quest Browser). If it does not, the project page shows Start VR as before, and the home page stops trying in that browser. Meta Quest Browser also shows an Enter VR button in its own bar (`offerSession`).
 
@@ -21,13 +22,27 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 - `public/match.js`, `public/match-judge.js` — the match task and its forgiving check
 - `public/xr-nav.js` — going from page to page in VR without pressing Start VR again
 - `public/shell.js` — the top bar of a project page (back to the list, project name)
+- `public/duel.js` — Duel: the lobby and the game in VR
+- `public/duel-physics.js` — Duel: the fields of the two shields and how a charge moves (no three.js, can be tested on its own)
+- `public/duel-net.js` — Duel: the connection to the lobby
+- `src/worker.js` — the Worker: serves `public/`, and `/api/duel`, the lobby (a Durable Object)
 - `public/vendor/three/` — three.js
 - `public/record.js` — a small record kept in this tab only
 - `public/lab.js` — the electromagnetism lab: the room, stations, challenges, particle gun, probe, wrist menu and moving (walking, joystick with a comfort ring, teleport, turning in 30° steps)
 - `public/lab-physics.js` — its physics: fields of charges, poles, current loops (Biot–Savart) and uniform regions, added together; the Boris method for the motion of a charged particle; field lines
 - `public/lab-text.js` — its boards and buttons, with italic symbols and stacked fractions
 
+## Duel
+
+- **Lobby.** No account. The first time, you choose a name from a list (no typing in a headset); it is kept in the browser, with a random id, so a dropped connection gets its seat back. Six tables with two seats each: point at an empty seat and press the trigger to sit. When both seats are taken a 3-second countdown starts; pointing at your own seat stands you up. After a game, both point at their seat (Play again) to start another. **Practice** fires charges at you from the other end, with no one else needed.
+- **Controllers.** Right trigger: hold to charge, let go to fire (longer is faster, 4 to 10 m/s). A or B: the sign of the charge. Left trigger: hold to raise the shield (it uses energy). X: electric or magnetic shield. Y: turn the shield round.
+- **Physics** (`duel-physics.js`). The electric shield is a uniformly charged ball in front of the left hand: like charges are slowed and pushed back, unlike charges pulled in. The magnetic shield is a uniform field in a slab in front of the left hand, along the top of the controller: the force is at right angles to the velocity, so it turns a charge and never slows it. Charges are moved with the Boris method, which keeps the speed exactly the same in a magnetic field. Fast charges get through either shield more easily. 5 hits and you are out; your own charges can hit you too.
+- **Who decides a hit.** Every charge is followed in both browsers, but only the player it was fired at decides what it hits (their own shield and body have no delay there); they send its position ten times a second so both see the same path, and report hits to the lobby, which counts each charge once and keeps the score.
+- **Testing with one headset.** A computer browser can also sit at a table: click to fire (no shield).
+- The lobby is one Durable Object (`Lobby`, SQLite class, so it runs on the free plan). It keeps a seat 10 seconds after a connection drops; after that the other player wins.
+
 ## How it runs
 
-One Cloudflare Worker (`vr-phylab-uk`) serving `public/` as static files, custom domain `vr.phylab.uk`.
+One Cloudflare Worker (`vr-phylab-uk`) serving `public/` as static files, custom domain `vr.phylab.uk`. Requests to `/api/*` go to the Worker first (`src/worker.js`): `/api/duel` is the Duel lobby.
+Local test: `npx wrangler dev`, then open `http://localhost:8787/duel/` in two browser windows.
 Deploy: `npx wrangler deploy`, or connect this repo to Workers Builds so every push to `main` deploys.

@@ -1,13 +1,23 @@
 {
   // vr.phylab.uk — the 3D and VR part of the learn.phylab.uk lesson, on its own short address (easy to type on a headset).
-  // Static pages only, served from public/.
+  // Static pages are served from public/. Only /api/* runs the Worker first: /api/duel is the Duel lobby (a WebSocket
+  // to one Durable Object).
   "name": "vr-phylab-uk",
+  "main": "src/worker.js",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
   },
+  "durable_objects": {
+    "bindings": [{ "name": "LOBBY", "class_name": "Lobby" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Lobby"] }
+  ],
   "routes": [
     { "pattern": "vr.phylab.uk", "custom_domain": true }
   ],
