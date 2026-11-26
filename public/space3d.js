@@ -8,6 +8,8 @@
 // a controller or a hand. Sizes are in metres, so the scene is desk-sized in AR and at arm's length in VR.
 // three.js is served from this site (public/vendor/three/), so it comes from the same nearby Cloudflare edge as the page.
 import * as THREE from "/vendor/three/three.min.js";
+import { PROJECTS } from "/projects.js";
+import { sessionGranted, goInVR } from "/xr-nav.js";
 const { OrbitControls } = THREE;
 
 const TABLE = 0.3;            // half-width of the table: only objects above the table make the field
@@ -388,6 +390,17 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
   clearBtn.position.set(RIGHT.x - 0.05, 0.006, 0.28); clearBtn.userData = { kind: "clear" }; world.add(clearBtn); pickables.push(clearBtn);
   const clearLb = label([{ t: "Clear" }], 0.014); clearLb.position.set(RIGHT.x - 0.05, 0.024, 0.28); world.add(clearLb);
 
+  // the projects, as buttons on the floor at the front left: in VR, pointing at one goes to that project and stays in VR
+  const here = location.pathname.split("/").filter(Boolean)[0] || "";
+  PROJECTS.forEach((p, i) => {
+    const x = -0.26 + i * 0.1, z = 0.38, on = p.slug === here;
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.012, 0.04),
+      new THREE.MeshStandardMaterial({ color: on ? 0xbdb6a4 : 0x0d6b5f, roughness: 0.6 }));
+    b.position.set(x, 0.006, z); world.add(b);
+    if (!on) { b.userData = { kind: "go", href: `/${p.slug}/` }; pickables.push(b); }
+    const lb = label([{ t: p.title }], 0.014); lb.position.set(x, 0.024, z); world.add(lb);
+  });
+
   // field lines and their arrows: one set for the objects on the table and, in the match, one for the target field
   function lineSet(color) {
     const mat = new THREE.LineBasicMaterial({ color }), obj = new THREE.LineSegments(new THREE.BufferGeometry(), mat);
@@ -588,6 +601,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
     const u = hit.object.userData;
     if (u.kind === "clear") { clearAll(); return null; }
     if (u.kind === "check") { check(); return null; }
+    if (u.kind === "go") { log("go", { to: u.href }); if (renderer.xr.isPresenting) goInVR(u.href); else location.href = u.href; return null; }
     if (u.kind === "token") {
       if (charges.filter((c) => !c.falling).length >= MAX_OBJECTS) { flash(`At most ${MAX_OBJECTS} objects at a time.`); return null; }
       const t = u.t;
@@ -704,25 +718,38 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
   // This site opens in a VR headset's browser. A browser only starts VR from a tap, a pinch or the trigger, so the page
   // shows the space and a large Start VR button; on a device that cannot open VR it says so and still shows the space.
   const supported = navigator.xr ? navigator.xr.isSessionSupported("immersive-vr").catch(() => false) : Promise.resolve(false);
+  const XR_OPTIONS = { optionalFeatures: ["hand-tracking"] };
   let xrMode = null;
-  async function enter() {
+  async function use(session, how) {
+    xrMode = "vr";
+    await renderer.xr.setSession(session);
+    log("enter", { mode: "vr", how });
+  }
+  async function enter(how = "button") {
+    if (renderer.xr.isPresenting) return;
     try {
-      const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["hand-tracking"] });
-      xrMode = "vr";
-      await renderer.xr.setSession(session);
-      log("enter", { mode: "vr" });
+      await use(await navigator.xr.requestSession("immersive-vr", XR_OPTIONS), how);
     } catch (err) {
       xrMode = null;
       flash(`Could not start VR: ${err.message || err}`);
     }
   }
-  supported.then((ok) => {
+  // Meta Quest Browser: also offer VR in the browser's own bar (an Enter VR button there), whenever not in VR
+  function offer() {
+    if (!navigator.xr.offerSession || renderer.xr.isPresenting) return;
+    navigator.xr.offerSession("immersive-vr", XR_OPTIONS).then((s) => use(s, "browser bar")).catch(() => {});
+  }
+  supported.then(async (ok) => {
     note.innerHTML = ok
       ? `<p><b>Put the headset on, then start.</b> Point at an object and pinch or press the trigger to take it; it moves and turns with your hand.</p><button type="button" class="btn v3-enter">Start VR</button>`
       : `<p><b>This browser cannot open VR.</b> Open vr.phylab.uk in the browser of a VR headset (for example Meta Quest). The space below is a preview: drag to turn it.</p>`;
     note.hidden = false;
     const b = note.querySelector(".v3-enter");
-    if (b) b.addEventListener("click", enter);
+    if (b) b.addEventListener("click", () => enter());
+    if (!ok) return;
+    // came here from VR (the home page or another project): start VR without a tap if the browser allows it
+    if (await sessionGranted()) enter("handed on");
+    else offer();
   });
 
   renderer.xr.addEventListener("sessionstart", () => {
@@ -740,6 +767,7 @@ export function startSpace3D(root, { rec, mode: task = "explore", target = [], j
     mine.color(LINE.screen); if (goal) goal.color(TARGET_LINE.screen);
     controls.enabled = true; xrMode = null;
     log("exit");
+    offer();
   });
 
   // ---------- size and drawing ----------

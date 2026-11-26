@@ -20,6 +20,8 @@
 </main>
 <script type="module">
   import { PROJECTS } from "/projects.js";
+  import { vrLinks } from "/xr-nav.js";
+  vrLinks(document.getElementById("projects"));
   document.getElementById("projects").innerHTML = PROJECTS.map((p) =>
     `<a class="box" href="/${p.slug}/"><span class="box-title">${p.title}</span><span class="box-blurb">${p.blurb}</span><span class="box-go">Open ›</span></a>`).join("");
 </script>
