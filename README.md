@@ -8,6 +8,7 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 - `/match/` — Match: place hidden charges to make the orange field you are shown
 - `/lab/` — Electromagnetism lab: a classroom-sized room with five stations (a point charge, parallel plates, a box of uniform magnetic field, a bar magnet, a coil) and a table to build on; a particle gun in the right hand, a probe for E and B in the left, challenges at each station
 - `/duel/` — Duel: two players, each with an electric and a magnetic shield, fire charges at each other (see below)
+- `/crystal/` — Crystal unit cells: six structures (simple cubic, body-centred cubic, face-centred cubic, sodium chloride, caesium chloride, diamond). See the crystal with one unit cell marked, take the cell out (atoms cut along the cell faces, so only the part that belongs to the cell is left), pull the pieces apart, and see a corner, edge or face atom shared between 8, 4 or 2 cells. The count (with stacked fractions), the formula and the packing fraction are hidden until Show the count, so learners count first. Either hand: trigger on a button presses it, trigger or grip elsewhere holds the crystal, stick up and down resizes it. The preview's board can be clicked with a mouse.
 - The site is for VR headsets only: there are no Browser or AR modes. A project page shows the space and a large Start VR button (a browser only starts VR from a tap, a pinch or the trigger, never by itself). On a device that cannot open VR the page says so and shows the space as a preview you can turn with the mouse.
 - Fewer Start VR presses (`public/xr-nav.js`): choosing a box on the home page starts VR there and hands it on, so the project opens already in VR; in VR, the project buttons on the floor (front left) go to another project and stay in VR. This needs the browser to hand the VR session on to the next page (the `sessiongranted` event in Meta Quest Browser). If it does not, the project page shows Start VR as before, and the home page stops trying in that browser. Meta Quest Browser also shows an Enter VR button in its own bar (`offerSession`).
 
@@ -30,6 +31,7 @@ It was moved out of learn.phylab.uk (broshu/learn.phylab.uk, `public/during/`); 
 - `public/record.js` — a small record kept in this tab only
 - `public/lab.js` — the electromagnetism lab: the room, stations, challenges, particle gun, probe, wrist menu and moving (walking, joystick with a comfort ring, teleport, turning in 30° steps)
 - `public/lab-physics.js` — its physics: fields of charges, poles, current loops (Biot–Savart) and uniform regions, added together; the Boris method for the motion of a charged particle; field lines
+- `public/crystal.js` — Crystal unit cells: the structures, the cut atoms (clipping planes that follow each piece, with discs over the cut faces), the board and the hands
 - `public/lab-text.js` — its boards and buttons, with italic symbols and stacked fractions
 
 ## Duel
