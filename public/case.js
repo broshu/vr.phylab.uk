@@ -8,7 +8,8 @@
 // Three balconies in the same column have a gap in their row of pots. Only the physics (horizontal launch, so the
 // drop is proportional to the square of the horizontal distance) tells which one it was.
 // Tools: a laser rangefinder in the right hand, a tape measure in the left. The lift (at the door of the building)
-// takes you up to any balcony of that column, where you can push a pot off the rail at a speed you choose to check.
+// takes you up to any balcony of that column. There the pot on the rail is the check: point at it and hold the trigger
+// to push harder and harder (the speed shows above it), let go to push it off; or push it off with the controller itself.
 // Each visit is a new case (floor height, rail height, floor, speed and branch all change); its number is on the
 // boards, and /case/?case=1234 opens that case again. /case/?case=1234&answer shows the answer (in the preview only).
 // Models and textures: Poly Haven (CC0). Everything that carries a measurement is built here from the case numbers.
@@ -525,6 +526,7 @@ export function startCase(root, { rec } = {}) {
   function selectStart(c) {
     const b = boardHit(c);
     if (b) { const id = b.object.userData.board.at(b.uv); if (id) pressBoard(b.object.userData.board, id); return; }
+    if (potHit(c)) { push.charge = { c, t: 0 }; return; }
     if (c === rangeCtrl) { c.userData.laserOn = true; return; }
     if (c === tapeCtrl) {
       const h = surfaceHit(c); if (!h) return;
@@ -533,6 +535,7 @@ export function startCase(root, { rec } = {}) {
     }
   }
   function selectEnd(c) {
+    if (push.charge && push.charge.c === c) { launch(chargeSpeed(push.charge.t), "trigger"); return; }
     if (c !== rangeCtrl || !c.userData.laserOn) return;
     c.userData.laserOn = false; T_.laser.visible = T_.dot.visible = false;
     const h = surfaceHit(c);
@@ -560,7 +563,7 @@ export function startCase(root, { rec } = {}) {
     }
     // the tape follows the hand's pointer until its second end is set
     T_.pointer.visible = false;
-    if (tapeCtrl && !boardHit(tapeCtrl)) {
+    if (tapeCtrl && !boardHit(tapeCtrl) && !potHit(tapeCtrl)) {
       const h = surfaceHit(tapeCtrl);
       if (h && h.distance < 30) {
         T_.pointer.visible = true; T_.pointer.position.copy(h.point);
@@ -580,9 +583,8 @@ export function startCase(root, { rec } = {}) {
   }
   let hoverBoard = null;
 
-  // ---------- boards: the case card, the lift panel, and on each balcony a lift panel and the push test ----------
+  // ---------- boards: the case card and the lift panels; on a balcony, the pot on the rail is itself the push test ----------
   let where = 0;                 // 0: the courtyard; n ≥ 2: on the balcony of floor n
-  const push = { v: 3.0, flying: null, trails: [] };
   const B_ = {};
   function boards() {
     const card = makeBoard(0.9, 0.62, (g, W, H) => {
@@ -592,20 +594,10 @@ export function startCase(root, { rec } = {}) {
       y = write(g, "Right hand: laser rangefinder. Hold the trigger to aim, let go to measure.\nLeft hand: tape measure. Trigger once at one end, once at the other.\nThe lift is at the door of the building.\nLeft stick: walk. Right stick: turn, or push it forwards to jump.", 50, y + 18, W - 100, { size: 27, color: SOFT });
     });
     card.mesh.position.set(START.x - 1.2, 1.45, START.z - 1.6); card.mesh.rotation.y = 0.45; scene.add(card.mesh); pickables.push(card.mesh);
-    // the lift panel by the door
+    // the lift panel by the door, and one by the glass door of the balcony
     B_.lift = liftPanel(); B_.lift.mesh.position.set(-2.4 + 1.25, 1.35, 0.08); scene.add(B_.lift.mesh); pickables.push(B_.lift.mesh);
-    // on the balcony: a lift panel by the glass door and a board for pushing a pot off
     B_.liftUp = liftPanel(); B_.liftUp.mesh.visible = false; scene.add(B_.liftUp.mesh);
-    B_.push = makeBoard(0.5, 0.42, (g, W, H, btn) => {
-      write(g, "**Push a pot off the rail**", 30, 18, W - 60, { size: 34 });
-      write(g, "It leaves the rail horizontally at the speed you set.", 30, 72, W - 60, { size: 24, color: SOFT });
-      btn("slower", "−", 30, 140, 90, 80, { size: 50 });
-      g.fillStyle = INK; g.font = "600 48px ui-monospace, Menlo, monospace"; g.textAlign = "center"; g.fillText(`${push.v.toFixed(1)} m/s`, W / 2, 196); g.textAlign = "left";
-      btn("faster", "+", W - 120, 140, 90, 80, { size: 50 });
-      btn("push", "Push", 30, 250, W - 60, 70, { tone: "go" });
-      btn("clear", "Clear the marks", 30, 300 + 30, W - 60, 46, { size: 24 });
-    }, { ppm: 900 });
-    B_.push.mesh.visible = false; scene.add(B_.push.mesh);
+    pushTest();
   }
   function liftPanel() {
     return makeBoard(0.26, 0.42, (g, W, H, btn) => {
@@ -616,65 +608,136 @@ export function startCase(root, { rec } = {}) {
     }, { ppm: 900, radius: 20 });
   }
   function pressBoard(b, id) {
-    if (id.startsWith("go:")) { goTo(+id.slice(3)); return; }
-    if (b === B_.push) {
-      if (id === "slower") push.v = Math.max(0.5, Math.round((push.v - 0.1) * 10) / 10);
-      if (id === "faster") push.v = Math.min(8, Math.round((push.v + 0.1) * 10) / 10);
-      if (id === "push") pushPot();
-      if (id === "clear") clearPush();
-      b.redraw();
-    }
+    if (id.startsWith("go:")) goTo(+id.slice(3));
   }
   /** Go to the courtyard (n = 1) or to the balcony of floor n in the middle column. */
   function goTo(n) {
     log("lift", { floor: n });
     where = n === 1 ? 0 : n;
-    clearPush(false);
+    clearPush();
     for (const k in S.restPots) S.restPots[k].visible = true;
     const show = (b, on) => { b.mesh.visible = on; const i = pickables.indexOf(b.mesh); if (on && i < 0) pickables.push(b.mesh); if (!on && i >= 0) pickables.splice(i, 1); };
     if (!where) {
       rig.position.set(-2.4, 0, 1.6); rig.rotation.set(0, 0, 0);
-      show(B_.liftUp, false); show(B_.push, false);
+      show(B_.liftUp, false);
     } else {
       const y0 = (where - 1) * C.h;
       rig.position.set(0, y0, 0.55); rig.rotation.set(0, 0, 0);
       B_.liftUp.mesh.position.set(1.42, y0 + 1.3, 0.06); B_.liftUp.mesh.rotation.y = 0;
-      B_.push.mesh.position.set(-1.25, y0 + 1.25, 0.06); B_.push.mesh.rotation.y = 0;
-      show(B_.liftUp, true); show(B_.push, true);
+      show(B_.liftUp, true);
+      newTestPot();
     }
-    B_.lift.redraw(); B_.liftUp.redraw(); B_.push.redraw();
+    B_.lift.redraw(); B_.liftUp.redraw();
     comfort = 0.8;
   }
-  function pushPot() {
-    if (!where || push.flying) return;
-    const y = railTop(where), z0 = EDGE;
+
+  // ---------- the push test: the pot on the rail in front of you ----------
+  // Point at it and hold the trigger: the push builds up (an arrow behind the pot grows, the controller shakes harder,
+  // the speed shows above the pot); let go and the pot leaves the rail horizontally at that speed.
+  // Or push it with the controller itself: it leaves at the speed your hand was moving outwards.
+  const SLOT_Z = DEPTH - LEDGE / 2 + 0.05;
+  const push = { pot: null, hit: null, label: null, arrow: null, charge: null, flying: null, flights: [], waitNew: 0, hover: false, prev: new Map() };
+  function pushTest() {
+    push.hit = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.4, 12), new THREE.MeshBasicMaterial({ visible: false }));
+    push.hit.visible = false; scene.add(push.hit);
+    push.label = screenTex(320, 96);
+    push.sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: push.label.t, depthTest: false, transparent: true }));
+    push.sprite.scale.set(0.27, 0.081, 1); push.sprite.renderOrder = 5; push.sprite.visible = false; scene.add(push.sprite);
+    // the arrow: the push on the pot, from behind it (the balcony side) towards the outside
+    const am = new THREE.MeshBasicMaterial({ color: 0xff8a1f, transparent: true, opacity: 0.9, depthTest: false });
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 10), am), head = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 14), am);
+    shaft.rotation.x = Math.PI / 2; head.rotation.x = Math.PI / 2; shaft.renderOrder = head.renderOrder = 4;
+    push.arrow = new THREE.Group(); push.arrow.add(shaft, head); push.arrow.userData = { shaft, head }; push.arrow.visible = false; scene.add(push.arrow);
+  }
+  function label(text, sub = "") {
+    const { g, cv, t } = push.label;
+    g.clearRect(0, 0, cv.width, cv.height);
+    g.fillStyle = "rgba(20,24,22,0.82)"; g.beginPath(); g.roundRect(4, 4, cv.width - 8, cv.height - 8, 22); g.fill();
+    g.textAlign = "center";
+    if (sub) { g.fillStyle = "#ffd29a"; g.font = "500 30px -apple-system, Arial"; g.fillText(sub, cv.width / 2, 60); }
+    else { g.fillStyle = "#ffffff"; g.font = "700 56px ui-monospace, Menlo, monospace"; g.fillText(text, cv.width / 2, 68); }
+    t.needsUpdate = true;
+  }
+  const slotY = () => railTop(where);
+  function newTestPot() {
+    if (push.pot) scene.remove(push.pot);
     if (S.restPots[where]) S.restPots[where].visible = false;
-    const p = pot(true); p.position.set(0, y, z0); scene.add(p);
+    push.pot = pot(true); push.pot.position.set(0, slotY(), SLOT_Z); scene.add(push.pot);
+    push.hit.position.set(0, slotY() + 0.17, SLOT_Z);
+  }
+  function setArrow(v) {
+    const L = 0.06 + 0.07 * v, { shaft, head } = push.arrow.userData, zTip = SLOT_Z - 0.14;
+    shaft.scale.y = L; shaft.position.set(0, 0, -0.035 - L / 2); head.position.set(0, 0, 0);
+    push.arrow.position.set(0, slotY() + 0.12, zTip - 0.035); push.arrow.visible = true;
+  }
+  const potHit = (c) => { if (!where || !push.pot || push.flying) return null; aim(c); ray.far = 3; const h = ray.intersectObject(push.hit, false)[0]; ray.far = 60; return h || null; };
+  function chargeSpeed(t) { return Math.min(8, 0.3 + 0.9 * t); }
+  function launch(v, how) {
+    if (!where || !push.pot || push.flying) return;
+    v = Math.round(v * 10) / 10;
     const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffb02e })); line.frustumCulled = false; scene.add(line);
-    push.flying = { p, line, t: 0, y, z0, v: push.v, pts: [] };
-    log("push", { floor: where, v: push.v });
+    push.flying = { p: push.pot, line, t: 0, y: slotY(), v, pts: [], how };
+    push.pot = null; push.charge = null; push.arrow.visible = false;
+    label(`${v.toFixed(1)} m/s`); push.sprite.visible = true; push.sprite.position.set(0, slotY() + 0.5, SLOT_Z);
+    log("push", { floor: where, v, how });
   }
   function stepPush(dt) {
-    const f = push.flying; if (!f) return;
-    f.t += dt;
-    const z = f.z0 + f.v * f.t, y = f.y - 0.5 * G * f.t * f.t;
-    if (y <= 0) {
-      const tl = Math.sqrt((2 * f.y) / G), zl = f.z0 + f.v * tl;
-      f.p.position.set(0, 0, zl); f.pts.push(new THREE.Vector3(0, 0.02, zl)); f.line.geometry.setFromPoints(f.pts);
-      const ringM = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 32), new THREE.MeshBasicMaterial({ color: 0xffb02e, side: THREE.DoubleSide }));
-      ringM.rotation.x = -Math.PI / 2; ringM.position.set(0, 0.02, zl); scene.add(ringM);
-      push.trails.push(f.p, f.line, ringM); push.flying = null;
-      return;
+    const f = push.flying;
+    if (f) {
+      f.t += dt;
+      // it slides the last few centimetres to the edge of the ledge, then flies (from the edge, as a projectile)
+      const z = EDGE + f.v * f.t, y = f.y - 0.5 * G * f.t * f.t;
+      if (y <= 0) {
+        const tl = Math.sqrt((2 * f.y) / G), zl = EDGE + f.v * tl;
+        f.p.position.set(0, 0, zl); f.pts.push(new THREE.Vector3(0, 0.02, zl)); f.line.geometry.setFromPoints(f.pts);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.17, 32), new THREE.MeshBasicMaterial({ color: 0xffb02e, side: THREE.DoubleSide }));
+        ring.rotation.x = -Math.PI / 2; ring.position.set(0, 0.02, zl); scene.add(ring);
+        push.flights.push([f.p, f.line, ring]); push.flying = null; push.waitNew = 0.8;
+        while (push.flights.length > 3) for (const o of push.flights.shift()) scene.remove(o);
+      } else {
+        f.p.position.set(0, y, z); f.p.rotation.x += dt * 2.5;
+        f.pts.push(new THREE.Vector3(0, y + 0.1, z)); f.line.geometry.setFromPoints(f.pts);
+      }
     }
-    f.p.position.set(0, y, z); f.p.rotation.x += dt * 2;
-    f.pts.push(new THREE.Vector3(0, y + 0.1, z)); f.line.geometry.setFromPoints(f.pts);
+    if (push.waitNew > 0 && (push.waitNew -= dt) <= 0 && where) newTestPot();
   }
-  function clearPush(redraw = true) {
-    if (push.flying) { push.trails.push(push.flying.p, push.flying.line); push.flying = null; }
-    for (const o of push.trails) { scene.remove(o); if (o.geometry && o.isLine) o.geometry.dispose(); }
-    push.trails = [];
-    if (where && S.restPots[where]) S.restPots[where].visible = true;
-    if (redraw && B_.push) B_.push.redraw();
+  /** In VR, every frame: the trigger charge, the hand push, and the hint when you point at the pot. */
+  function updatePush(dt) {
+    if (!where) return;
+    const ch = push.charge;
+    if (ch) {
+      ch.t += dt;
+      const v = chargeSpeed(ch.t);
+      setArrow(v); label(`${v.toFixed(1)} m/s`); push.sprite.visible = true; push.sprite.position.set(0, slotY() + 0.5, SLOT_Z);
+      if (push.pot) push.pot.rotation.z = Math.sin(ch.t * 40) * 0.004 * v;
+      const gp = ch.c.userData.source && ch.c.userData.source.gamepad, hap = gp && gp.hapticActuators && gp.hapticActuators[0];
+      if (hap && hap.pulse) { try { hap.pulse(Math.min(1, 0.08 + v / 8), 40); } catch (e) { /* not supported */ } }
+    }
+    // pushing it with the controller itself
+    const centre = push.pot ? push.pot.position.clone().add(new THREE.Vector3(0, 0.12, 0)) : null;
+    for (const c of ctrls) {
+      if (!c.userData.source) continue;
+      const p = new THREE.Vector3().setFromMatrixPosition(c.matrixWorld), q = push.prev.get(c);
+      push.prev.set(c, p);
+      if (!q || !centre || push.charge || push.flying || dt <= 0) continue;
+      const vz = (p.z - q.z) / dt;
+      if (p.distanceTo(centre) < 0.16 && vz > 0.4) launch(vz, "hand");
+    }
+    // pointing at the pot: say what to do (once, before the first push)
+    if (!ch && !push.flying && push.pot) {
+      const pointing = ctrls.some((c) => c.userData.source && potHit(c));
+      if (pointing && !push.hover) { label("", "Hold the trigger to push"); push.sprite.visible = true; push.sprite.position.set(0, slotY() + 0.5, SLOT_Z); }
+      if (!pointing && push.hover && push.sprite.visible && !push.flights.length) push.sprite.visible = false;
+      push.hover = pointing;
+    }
+  }
+  function clearPush() {
+    if (push.flying) { scene.remove(push.flying.p, push.flying.line); push.flying = null; }
+    for (const f of push.flights) for (const o of f) scene.remove(o);
+    push.flights = []; push.charge = null; push.waitNew = 0;
+    if (push.pot) { scene.remove(push.pot); push.pot = null; }
+    if (push.arrow) push.arrow.visible = false;
+    if (push.sprite) push.sprite.visible = false;
   }
 
   /** In the preview only, with ?answer: the numbers of this case. */
@@ -811,12 +874,12 @@ export function startCase(root, { rec } = {}) {
   const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05), xr = renderer.xr.isPresenting;
-    if (xr && S) { locomotion(dt); renderer.xr.updateCamera(camera); placeVignette(); updateTools(); }
+    if (xr && S) { locomotion(dt); renderer.xr.updateCamera(camera); placeVignette(); updateTools(); updatePush(dt); }
     else if (!xr) controls.update();
     if (S) stepPush(dt);
     renderer.render(scene, camera);
   });
 
   // for checking: /case/?debugcase exposes the scene in the console
-  if (qs.has("debugcase")) window.cs = { C, scene, camera, controls, renderer, goTo: (n) => goTo(n), push: (v) => { push.v = v; pushPot(); }, get S() { return S; } };
+  if (qs.has("debugcase")) window.cs = { C, scene, camera, controls, renderer, rig, goTo: (n) => goTo(n), push: (v) => launch(v, "debug"), charge: (t) => { push.charge = { c: ctrls[0], t }; updatePush(0); }, get S() { return S; } };
 }
