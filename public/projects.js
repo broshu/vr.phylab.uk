@@ -7,4 +7,5 @@ export const PROJECTS = [
   { slug: "duel",    title: "Duel",    blurb: "Two players. Shield yourself with an electric or a magnetic field and fire charges at each other." },
   { slug: "crystal", title: "Crystal unit cells", blurb: "Take one unit cell out of a crystal and see how much of each atom really belongs to it." },
   { slug: "cabinet", title: "Crystal cabinet", blurb: "Nine crystals in a cabinet. Take one out and zoom from the object down to its atoms." },
+  { slug: "case",    title: "The fallen flowerpot", blurb: "A flowerpot fell from a balcony and broke. Look for clues, measure, and work out which floor it fell from." },
 ];
